@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProfOrient", "ProfOrient\ProfOrient.csproj", "{4F9FF976-4621-4FB4-AFBD-82F9938BA7E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProfOrient.Client", "ProfOrient.Client\ProfOrient.Client.csproj", "{8DAD6783-0B6D-45F7-9437-46F9C1A8B411}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F9FF976-4621-4FB4-AFBD-82F9938BA7E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F9FF976-4621-4FB4-AFBD-82F9938BA7E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F9FF976-4621-4FB4-AFBD-82F9938BA7E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F9FF976-4621-4FB4-AFBD-82F9938BA7E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DAD6783-0B6D-45F7-9437-46F9C1A8B411}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DAD6783-0B6D-45F7-9437-46F9C1A8B411}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DAD6783-0B6D-45F7-9437-46F9C1A8B411}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DAD6783-0B6D-45F7-9437-46F9C1A8B411}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B7A34361-5349-4760-87FF-49BCFAA3F56F}
+	EndGlobalSection
+EndGlobal
