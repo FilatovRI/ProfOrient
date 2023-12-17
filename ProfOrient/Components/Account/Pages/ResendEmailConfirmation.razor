@@ -12,10 +12,10 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Resend email confirmation</PageTitle>
+<PageTitle>Отправка подтверждения на почту</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
+<h1>Отправка подтверждения на почту</h1>
+<h2>Введите свой email.</h2>
 <hr />
 <StatusMessage Message="@message" />
 <div class="row">
@@ -28,7 +28,7 @@
                 <label for="email" class="form-label">Email</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Отправить</button>
         </EditForm>
     </div>
 </div>

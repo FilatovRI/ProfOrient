@@ -1,0 +1,83 @@
+﻿@page "/profession"
+@rendermode InteractiveAuto
+
+<head>
+    <script src="https://vk.com/js/api/openapi.js?168" type="text/javascript"></script>
+    @* <script type="text/javascript">
+        VK.init({
+            apiId: 51812270
+        });
+    </script> *@
+</head>
+
+<PageTitle>Подбор профессии</PageTitle>
+
+<h1>Подбор профессии</h1>
+
+<div class="container border">
+    <h3>Подключение профиля ВКонтакте</h3>
+    <label style="font-weight:bold">VK ID</label>
+    <div id="vk_auth"></div>
+
+    
+    <hr />
+
+    <label style="font-weight:bold">Логин + пароль + код авторизации</label>
+    <div>&nbsp;</div>
+    <div class="row">
+        <div class="col-3">
+            <InputText id="vkLogin" class="form-control" placeholder="Логин" @bind-Value="vkLogin"></InputText>
+        </div>
+
+        <div class="col-3">
+            <InputText id="vkPassword" class="form-control" placeholder="Пароль" @bind-Value="vkPassword"></InputText>
+        </div>
+
+        <div class="col-3">
+            @* <button @onclick="HandleSubmit" class="btn btn-primary">Получить код</button> *@
+            <InputText id="vkCode" class="form-control" placeholder="Код" @bind-Value="vkCode"></InputText>
+        </div>
+        
+        <div class="col-3">
+            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
+        </div>
+    </div>
+    @* &nbsp;
+    <div class="row">
+        <div class="col-4">
+            <InputText id="vkCode" class="form-control" placeholder="Код" @bind-Value="vkCode"></InputText>
+        </div>
+
+        <div class="col-4">
+            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
+        </div>
+    </div> *@
+    <div>&nbsp;</div>
+</div>
+
+<script type="text/javascript">
+    VK.init({
+        apiId: 51812270
+    });
+    VK.Widgets.Auth("vk_auth", {
+        width: 200,
+        onAuth: function (data) {
+            console.log(data);
+            // здесь можно выполнить дополнительные действия после успешной авторизации пользователя
+
+        }
+        //,
+        //authUrl: "http://localhost/siteaddr"
+    });
+</script>
+
+@code {
+    private string vkLogin;
+    private string vkPassword;
+    private string vkCode;
+
+    private void HandleSubmit()
+    {
+        Console.WriteLine($"vkLogin: '{vkLogin}'");
+    }
+}
