@@ -1,5 +1,8 @@
 ﻿@page "/profession"
-@rendermode InteractiveAuto
+@using VkNet
+@using VkNet.Enums.Filters
+@using VkNet.Model
+@rendermode InteractiveServer
 
 <head>
     <script src="https://vk.com/js/api/openapi.js?168" type="text/javascript"></script>
@@ -76,8 +79,40 @@
     private string vkPassword;
     private string vkCode;
 
-    private void HandleSubmit()
+    private async void HandleSubmit()
     {
         Console.WriteLine($"vkLogin: '{vkLogin}'");
+        try
+        {
+            var api = new VkApi();
+
+            if (!string.IsNullOrEmpty(vkLogin) && !string.IsNullOrEmpty(vkPassword))
+            {
+                if (!string.IsNullOrEmpty(vkCode))
+                    await api.AuthorizeAsync(new ApiAuthParams
+                    {
+                        ApplicationId = 51812270,
+                        Login = vkLogin,
+                        Password = vkPassword,
+                        Settings = Settings.All,
+                        TwoFactorAuthorization = () => vkCode
+                    });
+                else
+                    await api.AuthorizeAsync(new ApiAuthParams
+                    {
+                        ApplicationId = 51812270,
+                        Login = vkLogin,
+                        Password = vkPassword,
+                        Settings = Settings.All
+                    });
+
+                var wall = await api.Wall.GetAsync(new WallGetParams());
+                var groups = await api.Groups.GetAsync(new GroupsGetParams());
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка HandleSubmit() => {ex}");
+        }
     }
 }
