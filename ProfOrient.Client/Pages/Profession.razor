@@ -1,0 +1,309 @@
+﻿@page "/profession"
+@using VkNet
+@using VkNet.Enums.Filters
+@using VkNet.Model
+@using System.Net
+@using Newtonsoft.Json
+@using RestSharp
+@rendermode InteractiveServer
+
+<head>
+    <script src="https://vk.com/js/api/openapi.js?168" type="text/javascript"></script>
+    @* <script type="text/javascript">
+        VK.init({
+            apiId: 51812270
+        });
+    </script> *@
+</head>
+
+<PageTitle>Подбор профессии</PageTitle>
+
+<h1>Подбор профессии</h1>
+
+<div class="container border">
+    <h3>Подключение профиля ВКонтакте</h3>
+    <label style="font-weight:bold">VK ID</label>
+    <div id="vk_auth"></div>
+
+    
+    <hr />
+
+    <label style="font-weight:bold">Логин + пароль + код авторизации</label>
+    <div>&nbsp;</div>
+    <div class="row">
+        <div class="col-3">
+            <InputText id="vkLogin" class="form-control" placeholder="Логин" @bind-Value="vkLogin"></InputText>
+        </div>
+
+        <div class="col-3">
+            <InputText id="vkPassword" class="form-control" placeholder="Пароль" @bind-Value="vkPassword"></InputText>
+        </div>
+
+        <div class="col-3">
+            @* <button @onclick="HandleSubmit" class="btn btn-primary">Получить код</button> *@
+            <InputText id="vkCode" class="form-control" placeholder="Код" @bind-Value="vkCode"></InputText>
+        </div>
+        
+        <div class="col-3">
+            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
+        </div>
+    </div>
+    @* &nbsp;
+    <div class="row">
+        <div class="col-4">
+            <InputText id="vkCode" class="form-control" placeholder="Код" @bind-Value="vkCode"></InputText>
+        </div>
+
+        <div class="col-4">
+            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
+        </div>
+    </div> *@
+    <div>&nbsp;</div>
+</div>
+<div>&nbsp;</div>
+<div style="visibility:@resumeVisibility">
+    <h2>Ваша рекомендация:</h2>
+    <div>
+        <p style="white-space: pre-line">@resumeValue</p>
+    </div>
+</div>
+
+<script type="text/javascript">
+    VK.init({
+        apiId: 51812270
+    });
+    VK.Widgets.Auth("vk_auth", {
+        width: 200,
+        onAuth: function (data) {
+            console.log(data);
+            // здесь можно выполнить дополнительные действия после успешной авторизации пользователя
+
+        }
+        //,
+        //authUrl: "http://localhost/siteaddr"
+    });
+</script>
+
+@code {
+    private string vkLogin;
+    private string vkPassword;
+    private string vkCode;
+    private string resumeValue;
+    private string resumeVisibility = "hidden";
+
+    private async Task HandleSubmit()
+    {
+        Console.WriteLine($"vkLogin: '{vkLogin}'");
+        try
+        {
+            var api = new VkApi();
+
+            if (!string.IsNullOrEmpty(vkLogin) && !string.IsNullOrEmpty(vkPassword))
+            {
+                if (!string.IsNullOrEmpty(vkCode))
+                    api.Authorize(new ApiAuthParams
+                    {
+                        ApplicationId = 51812270,
+                            Login = vkLogin,
+                            Password = vkPassword,
+                        Settings = Settings.All,
+                        TwoFactorAuthorization = () => vkCode
+                    });
+                else
+                    api.Authorize(new ApiAuthParams
+                    {
+                        ApplicationId = 51812270,
+                        Login = vkLogin,
+                        Password = vkPassword,
+                        Settings = Settings.All
+                    });
+
+                var wall = await api.Wall.GetAsync(new WallGetParams(){Extended = true});
+                var groups = await api.Groups.GetAsync(new GroupsGetParams());
+
+                List<string> groupsInfoList = new List<string>()
+                {"ГРУППЫ, НА КОТОРЫЕ ПОДПИСАН ПОЛЬЗОВАТЕЛЬ:"};
+
+                foreach (var group in wall.Groups)
+                {
+                    var groupInfo = await api.Groups.GetByIdAsync(null, group.Id.ToString(), GroupsFields.All);
+                    var singleGroupInfo = groupInfo.FirstOrDefault();
+
+                    groupsInfoList.Add($"{singleGroupInfo?.Name}. {singleGroupInfo?.Activity}. " +
+                                       $"{singleGroupInfo?.Status}. {singleGroupInfo?.Description}");
+                }
+
+                var groupsExcept = groups.Where(x => !wall.Groups.Select(wallGr => wallGr.Id).Contains(x.Id)).Select(x => x.Id).ToList();
+                foreach (var group in groupsExcept)
+                {
+                    var groupInfo = await api.Groups.GetByIdAsync(null, group.ToString(), GroupsFields.All);
+                    var singleGroupInfo = groupInfo.FirstOrDefault();
+
+                    groupsInfoList.Add($"{singleGroupInfo?.Name}. {singleGroupInfo?.Activity}. " +
+                                       $"{singleGroupInfo?.Status}. {singleGroupInfo?.Description}");
+                }
+
+                groupsInfoList.Add(Environment.NewLine);
+                groupsInfoList.Add("ПОСТЫ ПОЛЬЗОВАТЕЛЯ:");
+                foreach (var post in wall.WallPosts.Where(x => !string.IsNullOrEmpty(x.Text)).Take(200))
+                {
+                    groupsInfoList.Add(post.Text);
+                }
+                var userInfoAsString = String.Join(Environment.NewLine, groupsInfoList.ToArray());
+
+                var resume = await GetGptResponse(userInfoAsString);
+
+                if (!string.IsNullOrEmpty(resume))
+                {
+                    resumeVisibility = "visible";
+                    resumeValue = resume;
+
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка HandleSubmit() => {ex}");
+        }
+    }
+
+    private async Task<string> GetGptResponse(string question)
+    {
+        string? resume = String.Empty;
+
+        try
+        {
+            // Получаем IAM-токен
+            var yandexToken = Environment.GetEnvironmentVariable("YANDEX_TOKEN");
+
+            var options = new RestClientOptions("https://iam.api.cloud.yandex.net")
+            {
+                MaxTimeout = -1,
+            };
+            var client = new RestSharp.RestClient(options);
+            var request = new RestRequest("/iam/v1/tokens", Method.Post);
+            request.AddHeader("Content-Type", "application/json");
+            request.RequestFormat = DataFormat.Json;
+            request.AddJsonBody(new { yandexPassportOauthToken = yandexToken });
+            RestResponse response = await client.ExecuteAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK && !string.IsNullOrEmpty(response.Content))
+            {
+                var tokenInfo = JsonConvert.DeserializeObject<YandexTokenInfo>(response.Content);
+
+                if (tokenInfo != null)
+                {
+                    // Запрос GPT
+                    var options2 = new RestClientOptions("https://llm.api.cloud.yandex.net")
+                        {
+                            MaxTimeout = -1,
+                        };
+                    var client2 = new RestSharp.RestClient(options2);
+                    var request2 = new RestRequest("/foundationModels/v1/completion", Method.Post);
+                    request2.AddHeader("Content-Type", "application/json");
+                    request2.AddHeader("x-folder-id", "$FOLDER_ID");
+                    request2.AddHeader("Authorization", $"Bearer {tokenInfo.iamToken}");
+                    YandexGptRequest yandexGptRequest = new YandexGptRequest()
+                        {
+                            modelUri = "gpt://b1g6fd6tod219het00c4/yandexgpt-lite",
+                            completionOptions = new CompletionOptions()
+                            {
+                                stream = false,
+                                temperature = 0.6,
+                                maxTokens = "2000"
+                            },
+                            messages = new List<Message>()
+                            {
+                                new Message()
+                                {
+                                    role = "system",
+                                    text = "Ниже представлены список групп, на которые подписан пользователи и его посты на стене. Нужно на основе предпочтений пользователя найти профессию, которая ему больше всего подходит"
+                                },
+                                new Message()
+                                {
+                                    role = "user",
+                                    text = question
+                                }
+                            }
+                        };
+                    string requestJson = JsonConvert.SerializeObject(yandexGptRequest);
+                    request2.AddStringBody(requestJson, DataFormat.Json);
+                    RestResponse response2 = await client2.ExecuteAsync(request2);
+
+                    if (response2.StatusCode == HttpStatusCode.OK && !string.IsNullOrEmpty(response2.Content))
+                    {
+                        var yandexGptResponse = JsonConvert.DeserializeObject<YandexGptResponse>(response2.Content);
+
+                        if (yandexGptResponse != null)
+                            resume = yandexGptResponse.result.alternatives.FirstOrDefault()?.message.text;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка GetGptResponse() => {ex}");
+        }
+
+        return resume;
+    }
+
+    public class YandexTokenInfo
+    {
+        public string iamToken { get; set; }
+        public DateTime expiresAt { get; set; }
+    }
+
+    /// <summary>
+    /// ////////////
+    /// </summary>
+
+    public class CompletionOptions
+    {
+        public bool stream { get; set; }
+        public double temperature { get; set; }
+        public string maxTokens { get; set; }
+    }
+
+    public class Message
+    {
+        public string role { get; set; }
+        public string text { get; set; }
+    }
+
+    public class YandexGptRequest
+    {
+        public string modelUri { get; set; }
+        public CompletionOptions completionOptions { get; set; }
+        public List<Message> messages { get; set; }
+    }
+
+    /// <summary>
+    /// ////////////
+    /// </summary>
+
+    public class Alternative
+    {
+        public Message message { get; set; }
+        public string status { get; set; }
+    }
+
+    public class Result
+    {
+        public List<Alternative> alternatives { get; set; }
+        public Usage usage { get; set; }
+        public string modelVersion { get; set; }
+    }
+
+    public class YandexGptResponse
+    {
+        public Result result { get; set; }
+    }
+
+    public class Usage
+    {
+        public string inputTextTokens { get; set; }
+        public string completionTokens { get; set; }
+        public string totalTokens { get; set; }
+    }
+}
