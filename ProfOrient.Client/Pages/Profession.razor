@@ -6,6 +6,7 @@
 @using VkNet.Model
 @using System.Net
 @using System.Text.RegularExpressions
+@using System.Web
 @using Newtonsoft.Json
 @using RestSharp
 @rendermode InteractiveServer
@@ -117,6 +118,7 @@
         string baseUrl = NavigationManager.BaseUri;
         if (!baseUrl.EndsWith("/"))
             baseUrl += "/";
+        baseUrl = HttpUtility.UrlEncode(baseUrl);
         NavigationManager.NavigateTo($"https://oauth.vk.com/authorize?client_id=51812270&display=popup&redirect_uri={baseUrl}profession" +
                                      $"&scope=friends,notify,photos,wall,email,mail,groups,stats,offline&response_type=token&v=5.74");
     }
