@@ -8,6 +8,17 @@ using ProfOrient.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Расширенные ошибки
+//builder.Services.addserversideblazor().addcircuitoptions(options => { options.detailederrors = true; });
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddServerSideBlazor().AddCircuitOptions(x => x.DetailedErrors = true);
+}
+else
+{
+    builder.Services.AddServerSideBlazor();
+}
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()

@@ -1,20 +1,35 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 
+@inject IHostEnvironment Env
+@inject NavigationManager Nav
+
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/" />
-    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="ProfOrient.styles.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    @* <base href="/" /> *@
+    <base href="/@appBasePath" />
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css"/>
+    <link rel="stylesheet" href="app.css"/>
+    <link rel="stylesheet" href="ProfOrient.styles.css"/>
+    <link rel="icon" type="image/png" href="favicon.png"/>
+    <HeadOutlet/>
 </head>
 
 <body>
-    <Routes />
-    <script src="_framework/blazor.web.js"></script>
+<Routes/>
+<script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    private string appBasePath;
+
+    protected override void OnInitialized()
+    {
+        appBasePath = Nav.BaseUri.Contains("localhost/") ? "proforient/" : string.Empty;
+    }
+        
+
+}

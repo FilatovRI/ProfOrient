@@ -1,19 +1,17 @@
 ﻿@page "/profession"
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 @using VkNet
 @using VkNet.Enums.Filters
 @using VkNet.Model
 @using System.Net
+@using System.Text.RegularExpressions
 @using Newtonsoft.Json
 @using RestSharp
 @rendermode InteractiveServer
 
 <head>
-    <script src="https://vk.com/js/api/openapi.js?168" type="text/javascript"></script>
-    @* <script type="text/javascript">
-        VK.init({
-            apiId: 51812270
-        });
-    </script> *@
+
 </head>
 
 <PageTitle>Подбор профессии</PageTitle>
@@ -23,10 +21,8 @@
 <div class="container border">
     <h3>Подключение профиля ВКонтакте</h3>
     <label style="font-weight:bold">VK ID</label>
-    <div id="vk_auth"></div>
-
-    
-    <hr />
+    <div>&nbsp;</div>
+    <button @onclick="GetVkId" class="btn btn-success">ВХОД</button> <hr />
 
     <label style="font-weight:bold">Логин + пароль + код авторизации</label>
     <div>&nbsp;</div>
@@ -45,80 +41,146 @@
         </div>
         
         <div class="col-3">
-            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
+            <button @onclick="HandleSubmit" class="btn btn-success">ВХОД</button>
         </div>
     </div>
-    @* &nbsp;
-    <div class="row">
-        <div class="col-4">
-            <InputText id="vkCode" class="form-control" placeholder="Код" @bind-Value="vkCode"></InputText>
-        </div>
-
-        <div class="col-4">
-            <button @onclick="HandleSubmit" class="btn btn-success">Вход</button>
-        </div>
-    </div> *@
     <div>&nbsp;</div>
 </div>
 <div>&nbsp;</div>
-<div style="visibility:@resumeVisibility">
+<div style="display:@resumeVisibility">
     <h2>Ваша рекомендация:</h2>
     <div>
         <p style="white-space: pre-line">@resumeValue</p>
     </div>
 </div>
+<div style="visibility:@errorVisibility">
+    <h3>Ошибка:</h3>
+    <div>
+        <p style="white-space: pre-line; color:red">@errorValue</p>
+    </div>
+</div>
 
-<script type="text/javascript">
-    VK.init({
-        apiId: 51812270
-    });
-    VK.Widgets.Auth("vk_auth", {
-        width: 200,
-        onAuth: function (data) {
-            console.log(data);
-            // здесь можно выполнить дополнительные действия после успешной авторизации пользователя
-
-        }
-        //,
-        //authUrl: "http://localhost/siteaddr"
-    });
-</script>
+@* <script type="text/javascript">
+    
+</script> *@
 
 @code {
+    private string accessToken;
     private string vkLogin;
     private string vkPassword;
     private string vkCode;
     private string resumeValue;
-    private string resumeVisibility = "hidden";
+    private string resumeVisibility = "none";
+    private string errorValue;
+    private string errorVisibility = "hidden";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.Uri;
+        Console.WriteLine($"1 '{uri}'");
+        Console.WriteLine($"2 '{NavigationManager.BaseUri}'");
+
+
+        if (uri.Contains("#access_token="))
+        {
+            Uri uri2 = new Uri(uri);
+            string fragment = uri2.Fragment;
+            Console.WriteLine($"3 '{fragment}'");
+
+            string[] parameters = fragment.Split('&');
+
+            string access_token = String.Empty;
+            foreach (string parameter in parameters)
+            {
+                if (parameter.StartsWith("#access_token="))
+                {
+                    access_token = parameter.Substring("#access_token=".Length);
+                    accessToken = access_token;
+                    break;
+                }
+            }
+
+            Console.WriteLine($"4 '{access_token}'");
+            await HandleSubmit();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        Console.WriteLine($"0 firstRender: {firstRender}");
+        await JsRuntime.InvokeAsync<string>("console.log", $"02 firstRender: {firstRender}");
+    }
+
+    private void GetVkId()
+    {
+        // redirect_uri=http://localhost/proforient/profession
+        string baseUrl = NavigationManager.BaseUri;
+        if (!baseUrl.EndsWith("/"))
+            baseUrl += "/";
+        NavigationManager.NavigateTo($"https://oauth.vk.com/authorize?client_id=51812270&display=popup&redirect_uri={baseUrl}profession" +
+                                     $"&scope=friends,notify,photos,wall,email,mail,groups,stats,offline&response_type=token&v=5.74");
+    }
 
     private async Task HandleSubmit()
     {
-        Console.WriteLine($"vkLogin: '{vkLogin}'");
+        string testGroupId = String.Empty;
+
         try
         {
+            resumeVisibility = "none";
+            errorVisibility = "hidden";
+            Console.WriteLine("vkToken: '" + 
+                              (string.IsNullOrEmpty(accessToken) 
+                                  ? String.Empty 
+                                  : (accessToken.Substring(0, 20) + "...")) + "'");
+            Console.WriteLine($"vkLogin: '{vkLogin}'");
+            await JsRuntime.InvokeAsync<string>("console.log", "vkToken: '" + 
+                               (string.IsNullOrEmpty(accessToken) 
+                                   ? String.Empty 
+                                   : (accessToken.Substring(0, 20) + "...")) + "'");
+            await JsRuntime.InvokeAsync<string>("console.log", $"vkLogin: '{vkLogin}'");
+
             var api = new VkApi();
 
-            if (!string.IsNullOrEmpty(vkLogin) && !string.IsNullOrEmpty(vkPassword))
+            if (!string.IsNullOrEmpty(accessToken) ||
+                (!string.IsNullOrEmpty(vkLogin) && !string.IsNullOrEmpty(vkPassword)))
             {
-                if (!string.IsNullOrEmpty(vkCode))
+                // resumeVisibility = "block";
+                // resumeValue = "Анализируем профиль. Процесс может занять от нескольких секунд до пары минут...";
+                // StateHasChanged();
+                // await Task.Delay(1000);
+                await JsRuntime.InvokeVoidAsync("alert", 
+                    "Анализируем профиль. Процесс может занять от нескольких секунд до пары минут...");
+
+                if (!string.IsNullOrEmpty(accessToken))
+                {
                     api.Authorize(new ApiAuthParams
                     {
-                        ApplicationId = 51812270,
+                        AccessToken = accessToken
+                    });
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(vkCode))
+                        api.Authorize(new ApiAuthParams
+                        {
+                            ApplicationId = 51812270,
                             Login = vkLogin,
                             Password = vkPassword,
-                        Settings = Settings.All,
-                        TwoFactorAuthorization = () => vkCode
-                    });
-                else
-                    api.Authorize(new ApiAuthParams
-                    {
-                        ApplicationId = 51812270,
-                        Login = vkLogin,
-                        Password = vkPassword,
-                        Settings = Settings.All
-                    });
+                            Settings = Settings.All,
+                            TwoFactorAuthorization = () => vkCode
+                        });
+                    else
+                        api.Authorize(new ApiAuthParams
+                        {
+                            ApplicationId = 51812270,
+                            Login = vkLogin,
+                            Password = vkPassword,
+                            Settings = Settings.All
+                        }); 
+                }
 
-                var wall = await api.Wall.GetAsync(new WallGetParams(){Extended = true});
+                var wall = await api.Wall.GetAsync(new WallGetParams() { Extended = true });
                 var groups = await api.Groups.GetAsync(new GroupsGetParams());
 
                 List<string> groupsInfoList = new List<string>()
@@ -136,11 +198,22 @@
                 var groupsExcept = groups.Where(x => !wall.Groups.Select(wallGr => wallGr.Id).Contains(x.Id)).Select(x => x.Id).ToList();
                 foreach (var group in groupsExcept)
                 {
-                    var groupInfo = await api.Groups.GetByIdAsync(null, group.ToString(), GroupsFields.All);
-                    var singleGroupInfo = groupInfo.FirstOrDefault();
+                    testGroupId = group.ToString();
+                    try
+                    {
+                        var groupInfo = await api.Groups.GetByIdAsync(null, group.ToString(), GroupsFields.All);
+                        var singleGroupInfo = groupInfo.FirstOrDefault();
 
-                    groupsInfoList.Add($"{singleGroupInfo?.Name}. {singleGroupInfo?.Activity}. " +
-                                       $"{singleGroupInfo?.Status}. {singleGroupInfo?.Description}");
+                        groupsInfoList.Add($"{singleGroupInfo?.Name}. {singleGroupInfo?.Activity}. " +
+                                           $"{singleGroupInfo?.Status}. {singleGroupInfo?.Description}");
+                    }
+                    catch (Exception exGr)
+                    {
+                        var vv = testGroupId;
+                        Console.WriteLine($"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr}");
+                        await JsRuntime.InvokeAsync<string>("console.log", 
+                            $"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr}");
+                    }
                 }
 
                 groupsInfoList.Add(Environment.NewLine);
@@ -152,18 +225,24 @@
                 var userInfoAsString = String.Join(Environment.NewLine, groupsInfoList.ToArray());
 
                 var resume = await GetGptResponse(userInfoAsString);
-
+                await JsRuntime.InvokeAsync<string>("console.log", $"Ответ от GetGptResponse() => {resume}");
                 if (!string.IsNullOrEmpty(resume))
                 {
-                    resumeVisibility = "visible";
+                    resumeVisibility = "block";
                     resumeValue = resume;
 
+                    accessToken = String.Empty;
                 }
             }
         }
         catch (Exception ex)
         {
+            var vv = testGroupId;
+            resumeVisibility = "none";
+            errorVisibility = "visible";
+            errorValue = $"Ошибка HandleSubmit() => {ex.GetType()} => {ex.Message}";
             Console.WriteLine($"Ошибка HandleSubmit() => {ex}");
+            await JsRuntime.InvokeAsync<string>("console.log", $"Ошибка HandleSubmit() => {ex}");
         }
     }
 
@@ -173,6 +252,18 @@
 
         try
         {
+            // 
+            question = question.Replace(Environment.NewLine, " ");
+            // Удаляем эмодзи
+            question = Regex.Replace(question, @"\p{Cs}", String.Empty);
+            // Удаляем мульти-пробелы
+            question = Regex.Replace(question, @"\s+", " ");
+            // Укорачиваем строку
+            if (question.Length >= 7900)
+                question = question.Substring(0, 7900);
+            await JsRuntime.InvokeAsync<string>("console.log", 
+                $"Запрос к GetGptResponse() => {question}");
+
             // Получаем IAM-токен
             var yandexToken = Environment.GetEnvironmentVariable("YANDEX_TOKEN");
 
@@ -185,6 +276,8 @@
             request.AddHeader("Content-Type", "application/json");
             request.RequestFormat = DataFormat.Json;
             request.AddJsonBody(new { yandexPassportOauthToken = yandexToken });
+            await JsRuntime.InvokeAsync<string>("console.log",
+                $"Токен GetGptResponse() => {yandexToken}");
             RestResponse response = await client.ExecuteAsync(request);
 
             if (response.StatusCode == HttpStatusCode.OK && !string.IsNullOrEmpty(response.Content))
@@ -204,28 +297,29 @@
                     request2.AddHeader("x-folder-id", "$FOLDER_ID");
                     request2.AddHeader("Authorization", $"Bearer {tokenInfo.iamToken}");
                     YandexGptRequest yandexGptRequest = new YandexGptRequest()
+                    {
+                        modelUri = "gpt://b1g6fd6tod219het00c4/yandexgpt-lite",
+                        completionOptions = new CompletionOptions()
                         {
-                            modelUri = "gpt://b1g6fd6tod219het00c4/yandexgpt-lite",
-                            completionOptions = new CompletionOptions()
+                            stream = false,
+                            temperature = 0.6,
+                            maxTokens = "2000"
+                        },
+                        messages = new List<Message>()
+                        {
+                            new Message()
                             {
-                                stream = false,
-                                temperature = 0.6,
-                                maxTokens = "2000"
+                                role = "system",
+                                text = "Ниже представлены список групп, на которые подписан пользователи и его посты на стене. Нужно на основе предпочтений пользователя найти профессию, которая ему больше всего подходит"
                             },
-                            messages = new List<Message>()
+                            new Message()
                             {
-                                new Message()
-                                {
-                                    role = "system",
-                                    text = "Ниже представлены список групп, на которые подписан пользователи и его посты на стене. Нужно на основе предпочтений пользователя найти профессию, которая ему больше всего подходит"
-                                },
-                                new Message()
-                                {
-                                    role = "user",
-                                    text = question
-                                }
+                                role = "user",
+                                text = question
                             }
-                        };
+                        }
+                    };
+                    
                     string requestJson = JsonConvert.SerializeObject(yandexGptRequest);
                     request2.AddStringBody(requestJson, DataFormat.Json);
                     RestResponse response2 = await client2.ExecuteAsync(request2);
@@ -237,12 +331,32 @@
                         if (yandexGptResponse != null)
                             resume = yandexGptResponse.result.alternatives.FirstOrDefault()?.message.text;
                     }
+                    else
+                    {
+                        resumeVisibility = "none";
+                        errorVisibility = "visible";
+                        errorValue = $"Ошибка GetGptResponse() => Status2:{response2.StatusCode} => {response2.Content}";
+                        Console.WriteLine($"Ошибка GetGptResponse() => Status2:{response2.StatusCode} => {response2.Content}");
+                        await JsRuntime.InvokeAsync<string>("console.log", $"Ошибка GetGptResponse() => Status2:{response2.StatusCode} => {response2.Content}");
+                    }
                 }
+            }
+            else
+            {
+                resumeVisibility = "none";
+                errorVisibility = "visible";
+                errorValue = $"Ошибка GetGptResponse() => Status:{response.StatusCode} => {response.Content}";
+                Console.WriteLine($"Ошибка GetGptResponse() => Status:{response.StatusCode} => {response.Content}");
+                await JsRuntime.InvokeAsync<string>("console.log", $"Ошибка GetGptResponse() => Status:{response.StatusCode} => {response.Content}");
             }
         }
         catch (Exception ex)
         {
+            resumeVisibility = "none";
+            errorVisibility = "visible";
+            errorValue = $"Ошибка GetGptResponse() => {ex.GetType()} => {ex.Message}";
             Console.WriteLine($"Ошибка GetGptResponse() => {ex}");
+            await JsRuntime.InvokeAsync<string>("console.log", $"Ошибка GetGptResponse() => {ex}");
         }
 
         return resume;
