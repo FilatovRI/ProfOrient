@@ -218,9 +218,9 @@
                     catch (Exception exGr)
                     {
                         var vv = testGroupId;
-                        Console.WriteLine($"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr}");
+                        Console.WriteLine($"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr.GetType()} => {exGr.Message}");
                         await JsRuntime.InvokeAsync<string>("console.log", 
-                            $"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr}");
+                            $"Ошибка HandleSubmit(). GroupId={testGroupId} => {exGr.GetType()} => {exGr.Message}");
                     }
                 }
 
