@@ -182,8 +182,14 @@
                         }); 
                 }
 
-                var wall = await api.Wall.GetAsync(new WallGetParams() { Extended = true });
-                var groups = await api.Groups.GetAsync(new GroupsGetParams());
+                var wall = await api.Wall.GetAsync(new WallGetParams()
+                {
+                    Extended = true, Count = 50
+                });
+                var groups = await api.Groups.GetAsync(new GroupsGetParams()
+                {
+                    Count = 50
+                });
 
                 List<string> groupsInfoList = new List<string>()
                 {"ГРУППЫ, НА КОТОРЫЕ ПОДПИСАН ПОЛЬЗОВАТЕЛЬ:"};
